@@ -35,7 +35,12 @@ def compute_embeddings(folder: str):
     ]
     # save
     yamnet_emb_soa_2020 = np.stack(yamnet_emb_soa_2020)
-    np.save(os.path.join(folder, "sons_al_balco_2020_yamnet.npy"), yamnet_emb_soa_2020)
+    np.save(
+        os.path.join(
+            folder, "yamnet", "sons_al_balco_2020", "sons_al_balco_2020_yamnet.npy"
+        ),
+        yamnet_emb_soa_2020,
+    )
     # delete data
     del data_soa_2020
     del yamnet_emb_soa_2020
@@ -63,7 +68,12 @@ def compute_embeddings(folder: str):
     ]
     # save
     yamnet_emb_soa_2021 = np.stack(yamnet_emb_soa_2021)
-    np.save(os.path.join(folder, "sons_al_balco_2021_yamnet.npy"), yamnet_emb_soa_2021)
+    np.save(
+        os.path.join(
+            folder, "yamnet", "sons_al_balco_2021", "sons_al_balco_2021_yamnet.npy"
+        ),
+        yamnet_emb_soa_2021,
+    )
     # delete data
     del data_soa_2021
     del yamnet_emb_soa_2021
@@ -90,7 +100,10 @@ def compute_embeddings(folder: str):
     ]
     # save
     yamnet_emb_granollers = np.stack(yamnet_emb_granollers)
-    np.save(os.path.join(folder, "granollers_yamnet.npy"), yamnet_emb_granollers)
+    np.save(
+        os.path.join(folder, "granollers", "granollers_yamnet.npy"),
+        yamnet_emb_granollers,
+    )
     # delete data
     del data_granollers
     del yamnet_emb_granollers
@@ -117,7 +130,9 @@ def compute_embeddings(folder: str):
     ]
     # save
     yamnet_emb_sabadell = np.stack(yamnet_emb_sabadell)
-    np.save(os.path.join(folder, "sabadell_yamnet.npy"), yamnet_emb_sabadell)
+    np.save(
+        os.path.join(folder, "sabadell", "sabadell_yamnet.npy"), yamnet_emb_sabadell
+    )
 
 
 if __name__ == "__main__":
