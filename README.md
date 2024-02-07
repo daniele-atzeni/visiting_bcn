@@ -7,10 +7,10 @@ run compute_yamnet_embeddings.py
 ## Birdnet
 
 run:
-python BirdNET-Analyzer/embeddings.py --i data/sons_al_balco_audios/audios_2020/ --o data/embeddings/birnet/sons_al_balco_2020/
-python BirdNET-Analyzer/embeddings.py --i data/sons_al_balco_audios/audios_2021/ --o data/embeddings/birnet/sons_al_balco_2021/
-python BirdNET-Analyzer/embeddings.py --i data/sabadell/ --o data/embeddings/birnet/sabadell/
-python BirdNET-Analyzer/embeddings.py --i data/granollers/ --o data/embeddings/birnet/granollers/
+python3 BirdNET-Analyzer/embeddings.py --i data/sons_al_balco_audios/audios_2020/ --o data/embeddings/birdnet/sons_al_balco_2020/
+python3 BirdNET-Analyzer/embeddings.py --i data/sons_al_balco_audios/audios_2021/ --o data/embeddings/birdnet/sons_al_balco_2021/
+python3 BirdNET-Analyzer/embeddings.py --i data/sabadell/ --o data/embeddings/birdnet/sabadell/
+python3 BirdNET-Analyzer/embeddings.py --i data/granollers/ --o data/embeddings/birdnet/granollers/
 
 ## Perch
 
