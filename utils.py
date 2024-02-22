@@ -7,7 +7,7 @@ import pandas as pd
 import tensorflow as tf
 import tensorflow_io as tfio
 
-from taxonomy_leaves import taxonomy_leaves
+from old_things.taxonomy_leaves import taxonomy_leaves
 
 from yamnet import *
 

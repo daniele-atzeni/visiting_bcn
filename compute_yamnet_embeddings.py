@@ -5,7 +5,7 @@ import numpy as np
 
 from yamnet import yamnet_model
 
-from dataset_creation import create_audio_data_from_videos
+from utils_new import create_audio_data_from_videos
 
 
 def compute_embeddings(folder: str):
