@@ -31,7 +31,7 @@ run perch/embed_audio.ipynb with the correct source_file_patterns and output_dir
 
 ## After computing the embeddings
 
-Aggregate the embeddings to have consistent windows lengths across different pretrained models by calling make_consistent_emb.py
+Run process_embeddings.py to obtain list of numpy arrays of shape (n_frame, emb_dim) as embeddings, and list of list of list of labels for each frame of each audio files. This prepare the embeddings for the real analysis
 
 ## Embeddings Analysis
 

@@ -48,11 +48,14 @@ def create_audio_data_from_videos(filename: str, pre_url: str) -> list:
     return audios
 
 
-def create_yamnet_frame_labels(labels_filename: str, frame_shift: float = 0.48) -> dict:
+def create_frame_labels(
+    labels_filename: str, frame_length:float = 0.96, frame_shift: float = 0.48
+) -> list[list[list[str]]]:
     """
     This function create a dictionary {filename: {n_frame: list of labels}}
     n_frame refers to the frame number in the original file, considering the given
-    shift.
+    shift. Then we will modify it to make it a list[list[list]] of labels, for
+    each label of each frame of each file.
 
     Original labels contains a list of annotations and other important fields.
     We will use only foreground labels.
@@ -96,7 +99,11 @@ def create_yamnet_frame_labels(labels_filename: str, frame_shift: float = 0.48) 
                 lab for lab, dist in annot if dist == "Foreground"
             ]
 
-    return foreground_lab
+    res = []
+    for _, labels in sorted(foreground_lab.items()):
+        res.append([labels.get(i, []) for i in range(max(labels.keys()) + 1)])
+
+    return res
 
 
 def load_embeddings(folder, model) -> list[np.ndarray]:
@@ -247,12 +254,12 @@ def modify_yamnet_labels_windows(
         return list(set(res))
 
     new_labels = []
+    if original_w_shift == 0:
+        n_emb = int(new_w_size / original_w_size)
+    else:
+        n_emb = int((new_w_size - original_w_size) / original_w_shift)
     start = 0
     while start < max(orig_labels.keys()):
-        if original_w_shift == 0:
-            n_emb = int(new_w_size / original_w_size)
-        else:
-            n_emb = int((new_w_size - original_w_size) / original_w_shift)
         end = start + n_emb
         lab_list = [orig_labels.get(i, []) for i in range(start, end)]
         new_labels.append(aggr_lab_fn(lab_list[start:end]))
