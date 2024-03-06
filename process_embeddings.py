@@ -7,7 +7,7 @@ from tensorflow.data import TFRecordDataset
 from perch.chirp.inference import tf_examples
 from etils import epath
 
-from utils_new import create_frame_labels
+from utils import create_frame_labels
 
 
 def load_embeddings(folder, model) -> list[np.ndarray]:

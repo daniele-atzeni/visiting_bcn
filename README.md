@@ -33,6 +33,14 @@ run perch/embed_audio.ipynb with the correct source_file_patterns and output_dir
 
 Run process_embeddings.py to obtain list of numpy arrays of shape (n_frame, emb_dim) as embeddings, and list of list of list of labels for each frame of each audio files. This prepare the embeddings for the real analysis
 
-## Embeddings Analysis
+## Embeddings 2D plots
 
 In the file dimensionality_reduction_study.ipynb, we studied the hyper-parameters of different dimensionality reduction algorithm. We identified (by eye) the ideal configuration to compute 2D embeddings and do a qualitative embedding and distribution shifts analysis.
+
+## Shifts in the Distributions
+
+In compute_distribution_shift.py, we compute for each model the shifts in the distributions for each feature of the latent variables of various models. The results are saved as a pickle in the results folder. To analyze it, see the notebook distribution_shifts_analysis.ipynb.
+
+## Data exploration
+
+In data_exploration.ipynb we study basics statistics of the dataset (records per label and dataset etc.)
