@@ -4,7 +4,10 @@
 
 Before computing the embeddings, remove_unlabeled_audios.py must be run in order
 to consider only Sons al Balco data with labels and removing labels attached to
-non existing files
+non existing files. Also, clone BirdNET and perch Github repositories at these links:
+https://github.com/google-research/perch
+https://github.com/kahst/BirdNET-Analyzer
+
 
 ## To compute the embeddings
 

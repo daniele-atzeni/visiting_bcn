@@ -1,12 +1,5 @@
 data
 __pycache__
-pyvis_tutorial
-librosa_tutorial
-AudioMAE
-BirdNET-Analyzer
-perch
-ml_models
-bcn_venv
-old_things
+env_bcn
 figures
 results
