@@ -207,8 +207,8 @@ def load_joint_processed_data(data_folder: str) -> tuple[dict, dict, list]:
 
 def load_per_file_processed_data(data_folder: str) -> tuple[dict, dict, list]:
     """
-    This function load embeddings as numpy arrays insted of a list of numpy arrays
-    for each file. It does the same for the labels, obtaining a list (for each frame)
+    This function load embeddings as lists of numpy arrays for each file. 
+    It does the same for the labels, obtaining a list (for each frame)
     of lists of labels.
     The computation is done for all the models and datasets and returned as a dict
     (model, dataset_name) : embeddings/labels. It also returns the ordered tuple

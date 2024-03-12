@@ -47,3 +47,7 @@ In compute_distribution_shift.py, we compute for each model the shifts in the di
 ## Data exploration
 
 In data_exploration.ipynb we study basics statistics of the dataset (records per label and dataset etc.)
+
+## Training linear layer
+
+TODO
