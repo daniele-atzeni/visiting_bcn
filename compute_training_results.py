@@ -1,5 +1,6 @@
 import math
 import os
+import pickle
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -175,12 +176,13 @@ if __name__ == "__main__":
                 output_classes = np.where(outputs > 0.5, 1, 0)
                 results[model][(d1, d2)] = classification_report(output_classes, test_lab, output_dict=True)
 
-    # save the results into a txt file
+    # save the results into a pickle file
     for model in models:
         res_folder = os.path.join(RESULTS_FOLDER, model)
         if not os.path.exists(res_folder):
             os.makedirs(res_folder)
-        with open(os.path.join(res_folder, "training_results.txt"), "w") as f:
-            f.write(str(results[model]))
+        with open(os.path.join(res_folder, "training_results.pkl"), "wb") as f:
+            pickle.dump(results[model], f)
+
 
     # as a benchmark, compute also the performance on the overall dataset

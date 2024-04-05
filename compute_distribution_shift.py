@@ -88,8 +88,8 @@ for model in models:
             res[l][comp_data][f"avg_dist_{comp_data}"] = avg_dist_comp
             dist_20_comp = np.mean([np.linalg.norm(e - centr_20) for e in e_lab])
             dist_comp_20 = np.mean([np.linalg.norm(e - centr_comp) for e in e1_lab])
-            res[l][comp_data]["dist_20_21"] = dist_20_comp
-            res[l][comp_data]["dist_21_20"] = dist_comp_20
+            res[l][comp_data][f"dist_20_{comp_data}"] = dist_20_comp
+            res[l][comp_data][f"dist_{comp_data}_20"] = dist_comp_20
 
     # save results with pickle
     with open(os.path.join(res_model_folder, "shifts_results.pkl"), "wb") as f:
