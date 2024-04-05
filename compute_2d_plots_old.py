@@ -9,7 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import umap
 
-from utils import load_embeddings, load_labels, compute_all_labels, aggregate_embeddings, aggregate_labels
+from utils import load_joint_processed_data
 
 # Number of colors
 num_colors = 40
@@ -50,9 +50,8 @@ def plot_overall_embeddings(
     alpha: float = 0.6,
     filename: str = "all_datasets",
 ):
-    n_col = len(datasets) // 3 + len(datasets) % 3
-    _, axs = plt.subplots(n_col, 3, figsize=(20, 10))
-    axs = axs.flatten()
+    n_col = len(datasets) // 2 + len(datasets) % 2
+    _, axs = plt.subplots(n_col, 2, figsize=(20, 10))
 
     for i, dataset in enumerate(datasets):
         start, end = idxs[dataset]
@@ -130,33 +129,25 @@ def plot_labels_embeddings(
         plt.close()
 
 
+DATA_FOLDER = "data/processed_embeddings"
+
 IMAGE_FOLDER = "figures/2d_plots"
 if not os.path.exists(IMAGE_FOLDER):
     os.makedirs(IMAGE_FOLDER)
 
-DATA_FOLDER: str = "data"
-EMB_FOLDER: str = "data/embeddings"
+loaded_embeddings, labels, all_labels = load_joint_processed_data(DATA_FOLDER)
+# loaded embeddings {(model, dataset): np.array of shape (n_file*n_frame, emb_dim)}
+# labels {(model, dataset): list (n_file*n_frame) of list of labels}
 
-loaded_embeddings = load_embeddings(EMB_FOLDER)
-labels = load_labels(DATA_FOLDER)
-all_labels = compute_all_labels(labels)
-
-models = loaded_embeddings.keys()
-datasets = labels.keys()
-
-# let's modify embeddings to be {model: {dataset: np.array (total_frames, features)}}
-# and labels to be {dataset: [list (tot n frames) of lists (labels in frame)]}
-loaded_embeddings = aggregate_embeddings(loaded_embeddings)
-labels = aggregate_labels(labels)
+models = sorted(set([m for m, _ in loaded_embeddings.keys()]))
+datasets = sorted(set([d for _, d in loaded_embeddings.keys()]))
 
 for model in models:
+    print(f"Plotting for model {model}")
     image_folder = os.path.join(IMAGE_FOLDER, model)
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
 
-    print(f"Plotting for model {model}")
-    print(f"and saving them into {image_folder}")
-    
     # we want a single array for every emb of the model (i.e., for each dataset)
     # and a list of list of labels, w same length as emb.shape[0].
     # Also, to do the plots, we need a dict {dataset: (start_idx, end_idx)}.
@@ -165,7 +156,7 @@ for model in models:
     start, end = 0, 0
     model_emb = []
     for dataset in datasets:
-        e = loaded_embeddings[model][dataset]
+        e = loaded_embeddings[(model, dataset)]
         end += e.shape[0]
         idxs[dataset] = (start, end)
         start = end
@@ -175,7 +166,7 @@ for model in models:
 
     model_labels = []
     for dataset in datasets:
-        model_labels.extend(labels[dataset])
+        model_labels.extend(labels[(model, dataset)])
 
     pca = PCA(n_components=50)
     pca_data = pca.fit_transform(model_emb)

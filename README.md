@@ -16,9 +16,10 @@ windows shift). This choice will be later addressed in order to have embeddings
 relative to file pieces of the same length. In the following the details of each
 available model:
 
-### Yamnet
+### Yamnet, OpenL3, WAV2VEC
 
-run compute_yamnet_embeddings.py
+run compute_embeddings.py, eventually change the folders
+Yamnet embeddings are computed with tensorflow-hub, opnel3 with openl3 repo on github, wav2vec with transformers library
 
 ### Birdnet
 

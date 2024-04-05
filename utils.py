@@ -11,7 +11,7 @@ from moviepy.editor import VideoFileClip
 
 from tensorflow.data import TFRecordDataset
 
-from perch.chirp.inference import tf_examples
+#from perch.chirp.inference import tf_examples
 from etils import epath
 
 
@@ -366,3 +366,222 @@ def modify_yamnet_labels_windows(
         start = end
 
     return new_labels
+
+
+
+
+
+def load_embeddings(folder:str) -> dict[str, dict[str, list[np.ndarray]]]:
+    """
+    Function to load embeddings from YamNet, OpenL3, and wav2vec models.
+    In this case, folders are organized as 
+    folder
+        model1
+            dataset1
+                file1
+                file2
+                ...
+            dataset2
+                file1
+                file2
+                ...
+            ...
+        model2
+            ...
+        ...
+    
+    File in this case are pickle that contains numpy arrays (n_frames, emb_dim).
+    Each frame correspond to more or less a second of audio.
+    Results are {model : {dataset : list of numpy arrays}}.
+    Each element of the list correspond to a file (sorted in alphabetical order).
+    """
+    models = os.listdir(folder)
+    datasets = os.listdir(os.path.join(folder, models[0]))
+
+    results = {}
+    for model in models:
+        results[model] = {}
+        for dataset in datasets:
+            path = os.path.join(folder, model, dataset)
+            arr_list = []
+            for filename in sorted(os.listdir(path)):
+                with open(os.path.join(path, filename), "rb") as f:
+                    arr_list.append(pickle.load(f))
+            results[model][dataset] = arr_list.copy()
+    
+    return results
+
+
+def load_sons_al_balco_labels(root_folder:str) -> dict[str, dict[str, list[list[str]]]]:
+    """
+    This function loads the labels of the Sons al Balco dataset for Yamnet, OpenL3 and 
+    wav2vec models. We assume that the embeddings are already computed, so we use them
+    to understand how many frames are in each file, hence we can decide in which frame
+    we must include each label.
+    The returned structure is the same as the one of load_embeddings without models hierarchy, 
+    except that it returns list of labels instead of numpy arrays, then:
+    {dataset : list (n_files) of lists (n_frames in file) of lists (n_labels in frame)}
+    """
+    embeddings = load_embeddings(os.path.join(root_folder, "embeddings"))
+    n_frames_dict = {}
+    emb_dict = list(embeddings.values())[0] # n_frames is independent from the model
+    for dataset in emb_dict.keys():
+        n_frames_dict[dataset] = [e.shape[0] for e in emb_dict[dataset]]
+        # embeddings are ordered by filename
+
+    datasets = ["sons_al_balco_2020", "sons_al_balco_2021"]
+    
+    # get the length of the files
+    files_length = {}
+    for dataset in datasets:
+        files_length[dataset] = {}
+        filenames = sorted(os.listdir(os.path.join(root_folder, f"{dataset}_audios")))
+        filenames = [f for f in filenames if not f.endswith(".DS_Store")]
+        for i, el in enumerate(filenames):
+            audio_data, sr = librosa.load(os.path.join(root_folder, f"{dataset}_audios", el))
+            files_length[dataset][i] = len(audio_data) / sr
+
+    labels = {}
+    for dataset in datasets:
+        labels[dataset] = []    # list of files
+        filename = os.path.join(root_folder, f"{dataset}_labels", "labels.json")
+        with open(filename, "r") as f:
+            labels_list = json.load(f)
+        sorted_labels = sorted(labels_list, key=lambda x: x["original_filename"])
+    
+        for i, el in enumerate(sorted_labels):
+            file_length = files_length[dataset][i]
+            n_frames = n_frames_dict[dataset][i]
+            frames_list = [[] for _ in range(n_frames)]
+            # el["segmentations"] is a list of dictionaries
+            # in these dictionaries we care about "start_time", "end_time" and "annotations"
+            # annotations is a dictionary with "Distance", that contains foreground/background
+            # in ["Distance"]["values"][0]["value"], and "Element" that contains the label
+            # in ["Element"]["values"][0]["value"]
+            for annot in el["segmentations"]:
+                start = annot["start_time"]
+                end = annot["end_time"]
+                act_lab = annot["annotations"]["Element"]["values"][0]["value"]
+                if "Distance" not in annot["annotations"]:
+                    dist = "Foreground"
+                else:
+                    dist = annot["annotations"]["Distance"]["values"][0]["value"]
+                if dist != "Foreground":
+                    continue
+                # compute first and last frames that contain this annotation
+                frame_length = file_length / n_frames
+                first_frame = math.floor(start / frame_length)
+                last_frame = max(first_frame, math.floor(end / frame_length) - 1)
+                for fr in range(first_frame, last_frame + 1):
+                    frames_list[fr].append(act_lab)
+            labels[dataset].append(frames_list)            
+
+    return labels
+
+
+def load_granollers_labels(root_folder:str) -> dict[str, dict[str, list[list[str]]]]:
+    """
+    This function loads the labels of the Granollers dataset for Yamnet, OpenL3 and 
+    wav2vec models. We assume that the embeddings are already computed, so we use them
+    to understand how many frames are in each file, hence we can decide in which frame
+    we must include each label.
+    The returned structure is the same as the one of load_embeddings without models hierarchy, 
+    except that it returns list of labels instead of numpy arrays, then:
+    {dataset : list (n_files) of lists (n_frames in file) of lists (n_labels in frame)}
+    """
+    embeddings = load_embeddings(os.path.join(root_folder, "embeddings"))
+    n_frames_dict = {}
+    emb_dict = list(embeddings.values())[0] # n_frames is independent from the model
+    for dataset in emb_dict.keys():
+        n_frames_dict[dataset] = [e.shape[0] for e in emb_dict[dataset]]
+        # embeddings are ordered by filename
+
+    datasets = ["granollers"]
+    
+    # get the length of the files
+    files_length = {}
+    for dataset in datasets:
+        files_length[dataset] = {}
+        filenames = sorted(os.listdir(os.path.join(root_folder, f"{dataset}_audios")))
+        filenames = [f for f in filenames if not f.endswith(".DS_Store")]
+        for i, el in enumerate(filenames):
+            audio_data, sr = librosa.load(os.path.join(root_folder, f"{dataset}_audios", el))
+            files_length[dataset][i] = len(audio_data) / sr
+
+    labels = {}
+    for dataset in datasets:
+        labels[dataset] = []    # list of files
+        label_path = os.path.join(root_folder, f"{dataset}_labels")
+        # in this case the files are text files with one row for each label
+        # each row is start_time \t end_time \t label
+        for i, filename in enumerate(sorted(os.listdir(label_path))):
+            filepath = os.path.join(label_path, filename)
+            with open(filepath, "r") as f:
+                lines = f.readlines()
+            frames_list = [[] for _ in range(n_frames_dict[dataset][i])]
+            for line in lines:
+                try:
+                    start, end, label = line.strip().split("\t")
+                except ValueError:
+                    print(f"Error in labeling file {filename} with line {line}")
+                    continue
+                start = float(start)
+                end = float(end)
+                # check for start and end time
+                start = max(start, 0)
+                end = min(end, files_length[dataset][i])
+
+                frame_length = files_length[dataset][i] / n_frames_dict[dataset][i]
+                first_frame = math.floor(start / frame_length)
+                last_frame = max(first_frame, math.floor(end / frame_length) - 1)
+                for fr in range(first_frame, last_frame + 1):
+                    frames_list[fr].append(label)
+            labels[dataset].append(frames_list)
+    
+    return labels
+
+
+def load_labels(root_folder:str) -> dict[str, dict[str, list[list[str]]]]:
+    sons_al_balco_labels = load_sons_al_balco_labels(root_folder)
+    granollers_labels = load_granollers_labels(root_folder)
+    res = {**sons_al_balco_labels, **granollers_labels}
+    return {**sons_al_balco_labels, **granollers_labels}
+
+
+def compute_all_labels(labels) -> list[str]:
+    """
+    This function returns the list of all the labels present in the dataset.
+    """
+    all_labels = []
+    for dataset in labels.values():
+        for file in dataset:
+            for frame in file:
+                all_labels.extend(frame)
+    return sorted(set(all_labels))
+
+# let's modify embeddings to be {model: {dataset: np.array (total_frames, features)}}
+# and labels to be {dataset: [list (tot n frames) of lists (labels in frame)]}
+
+def aggregate_embeddings(embeddings) -> dict[str, dict[str, np.ndarray]]:
+    """
+    This function aggregates embeddings in order to have a dictionary with the
+    structure {model: {dataset: np.array (total_frames, features)}}.
+    """
+    res = {}
+    for model, dataset_dict in embeddings.items():
+        res[model] = {}
+        for dataset, emb_list in dataset_dict.items():
+            res[model][dataset] = np.concatenate(emb_list)
+    return res
+
+def aggregate_labels(labels) -> dict[str, list[list[str]]]:
+    """
+    This function aggregates labels in order to have a dictionary with the
+    structure {dataset: [list (tot n frames) of lists (labels in frame)]}.
+    """
+    res = {}
+    for dataset, file_list in labels.items():
+        res[dataset] = []
+        for file in file_list:
+            res[dataset].extend(file)
+    return res

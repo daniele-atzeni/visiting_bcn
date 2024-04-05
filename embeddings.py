@@ -4,9 +4,71 @@ import pickle
 import librosa
 import numpy as np
 
-from yamnet import yamnet_model
-
 from utils import create_audio_data_from_videos
+
+# yamnet
+import tensorflow_hub as hub
+
+# openl3
+import openl3
+import soundfile as sf
+
+# wav2vec
+from transformers import AutoProcessor, Wav2Vec2Model
+import torch
+
+
+def compute_openl3(filename:str) -> np.ndarray:
+    audio, sr = sf.read(filename)
+    emb, ts = openl3.get_audio_embedding(audio, 
+                                     sr, 
+                                     hop_size=0.5, 
+                                     content_type="env", 
+                                     embedding_size=512, 
+                                     input_repr="mel256", 
+                                     center=False, 
+                                     frontend="librosa",
+                                     )
+    return emb
+
+
+def compute_wav2vec(filename:str, sr=16000) -> np.ndarray:
+    audio, orig_sr = librosa.load(filename)
+    audio = librosa.resample(audio, orig_sr=orig_sr, target_sr=sr)
+
+    processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
+
+    # audio file is decoded on the fly
+    inputs = processor(audio, sampling_rate=sr, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    last_hidden_states = outputs.last_hidden_state
+    return last_hidden_states.numpy().squeeze()
+
+def compute_yamnet(filename:str) -> np.ndarray:
+    audio, _ = librosa.load(filename)
+
+    yamnet_model_handle = "https://tfhub.dev/google/yamnet/1"
+    yamnet_model = hub.load(yamnet_model_handle)
+    _, emb, _ = yamnet_model(audio)
+    # take only even elements of emb, because of frame shift
+    #idxs = [i for i in range(emb.shape[0]) if i%2==0]
+    #emb = emb.numpy()[idxs]
+    return emb.numpy()
+
+
+if __name__ == "__main__":
+    filename = '/Users/platypus/Desktop/visiting_bcn/data/sons_al_balco_audios/audios_2020/fu_xw5e8nskn2zyrra.wav'
+
+    emb1 = compute_openl3(filename)
+    print("openl3", emb1.shape, type(emb1))
+    emb2 = compute_wav2vec(filename)
+    print("wav2vec", emb2.shape, type(emb2))
+    emb3 = compute_yamnet(filename)
+    print("yamnet", emb3.shape, type(emb3))
+
 
 
 def compute_embeddings(folder: str):
@@ -94,6 +156,3 @@ def compute_embeddings(folder: str):
     dest_file = os.path.join(dest_folder, "sabadell_yamnet.npy")
     np.save(dest_file, yamnet_emb_sabadell)
 
-
-if __name__ == "__main__":
-    compute_embeddings(folder="data/embeddings/")
