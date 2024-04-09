@@ -47,11 +47,11 @@ def plot_overall_embeddings(
     model,
     image_folder,
     size: int = 3,
-    alpha: float = 0.6,
+    alpha: float = 0.3,
     filename: str = "all_datasets",
 ):
     n_col = len(datasets) // 3 + len(datasets) % 3
-    _, axs = plt.subplots(n_col, 3, figsize=(20, 10))
+    fig, axs = plt.subplots(n_col, 3, figsize=(15, 8), dpi=300)
     axs = axs.flatten()
 
     for i, dataset in enumerate(datasets):
@@ -76,10 +76,15 @@ def plot_overall_embeddings(
                 s=size,
                 alpha=alpha,
             )
-        axs[i].set_title(dataset.replace("_", " ").title())
-
-    plt.suptitle(f"{model} embeddings")
-    # plt.legend()
+        axs[i].set_title(dataset.replace("_", " ").title(), fontsize=20, pad=15)
+        axs[i].set_xticks([])
+        axs[i].set_yticks([])
+    #handles, labels = plt.gca().get_legend_handles_labels()
+    #lgnd = _.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.10), ncol=6, markerscale=5)
+    #for handle in lgnd.legendHandles:
+    #    handle.set_alpha(1)
+    plt.figlegend(bbox_to_anchor=(0.5, 1.05))
+    # plt.suptitle(f"{model} embeddings")
     plt.tight_layout()
     model_folder = os.path.join(image_folder, model)
     if not os.path.exists(model_folder):

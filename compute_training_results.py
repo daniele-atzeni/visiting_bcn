@@ -7,9 +7,14 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 import tqdm
 
+from sklearn.linear_model import RidgeClassifierCV
+
 import torch
 
 from utils import load_embeddings, load_labels, compute_all_labels#, aggregate_embeddings, aggregate_labels
+
+from typing import Union
+
 
 def train_test_split(embeddings:list[np.ndarray], labels:list[np.ndarray], train_perc:float=0.8) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -30,9 +35,10 @@ def train_test_split(embeddings:list[np.ndarray], labels:list[np.ndarray], train
     test_emb = np.concatenate(test_emb, axis=0)
     test_lab = np.concatenate(test_lab, axis=0)
 
-    return train_emb, train_lab, test_emb, test_lab
+    return train_emb, train_lab, test_emb, test_lab    
 
-def train_model(train_emb:np.ndarray, train_lab:np.ndarray, seed=17) -> torch.nn.Module:
+
+def train_model_torch(train_emb:np.ndarray, train_lab:np.ndarray, max_n:int=32, seed:int=17) -> torch.nn.Module:
     """
     This function initialize and train a linear model in PyTorch. The model is
     used in a multi-label classification task.
@@ -45,6 +51,26 @@ def train_model(train_emb:np.ndarray, train_lab:np.ndarray, seed=17) -> torch.nn
     perm = np.random.permutation(train_emb.shape[0])
     train_emb = train_emb[perm]
     train_lab = train_lab[perm]
+
+    # select only max_n elements for each class
+    """
+    n_labels = train_lab.shape[1]
+    n_frames = train_lab.shape[0]
+    if n_frames > max_n:
+        n_elements = np.sum(train_lab, axis=0)
+        n_elements = np.minimum(n_elements, max_n)
+        n_elements = n_elements.astype(int)
+        new_train_emb = []
+        new_train_lab = []
+        for i in range(n_labels):
+            indices = np.where(train_lab[:, i] == 1)[0]
+            np.random.shuffle(indices)
+            indices = indices[:n_elements[i]]
+            new_train_emb.append(train_emb[indices])
+            new_train_lab.append(train_lab[indices])
+        train_emb = np.concatenate(new_train_emb, axis=0)
+        train_lab = np.concatenate(new_train_lab, axis=0)
+    """
 
     # train
     emb_dim = train_emb.shape[1]
@@ -64,6 +90,21 @@ def train_model(train_emb:np.ndarray, train_lab:np.ndarray, seed=17) -> torch.nn
         optimizer.step()
     return model
 
+def train_model(train_emb:np.ndarray, train_lab:np.ndarray, method:str="sklearn", max_n:int=32, seed:int=17):
+    if method == "sklearn":
+        return RidgeClassifierCV(alphas=[1e-3, 1e-2, 1e-1, 1]).fit(train_emb, train_lab)
+    elif method == "torch":
+        return train_model_torch(train_emb, train_lab, max_n, seed)
+    raise ValueError(f"Method {method} not recognized")
+
+
+def predict(model, test_emb:np.ndarray, method:str="sklearn") -> np.ndarray:
+    if method == "sklearn":
+        return model.predict(test_emb)
+    elif method == "torch":
+        outputs = model(torch.tensor(test_emb, dtype=torch.float32)).detach().numpy()
+        return outputs
+    raise ValueError(f"Method {method} not recognized")
 
 if __name__ == "__main__":
     DATA_FOLDER: str = "data"
@@ -163,18 +204,17 @@ if __name__ == "__main__":
     for model in models:
         results[model] = {}
         for d1 in dataset_names:
+            # train a simple linear layer on train_emb and train_lab
+            train_emb, train_lab, _, _ = splitted_datasets[model][d1]
+            linear_model = train_model(train_emb, train_lab)
             for d2 in dataset_names:
-                print(f"Model {model} trained on {d1} and tested on {d2}")
-                train_emb, train_lab, _, _ = splitted_datasets[model][d1]
-                _, _, test_emb, test_lab = splitted_datasets[model][d2]
-
-                # train a simple linear layer on train_emb and train_lab
-                linear_model = train_model(train_emb, train_lab)
-
+                print(f"Testing model {model} trained on {d1} on {d2}")
                 # and evaluate it on test_emb and test_lab
-                outputs = linear_model(torch.tensor(test_emb, dtype=torch.float32)).detach().numpy()
+                _, _, test_emb, test_lab = splitted_datasets[model][d2]
+                #outputs = linear_model(torch.tensor(test_emb, dtype=torch.float32)).detach().numpy()
+                outputs = predict(linear_model, test_emb)
                 output_classes = np.where(outputs > 0.5, 1, 0)
-                results[model][(d1, d2)] = classification_report(output_classes, test_lab, output_dict=True)
+                results[model][(d1, d2)] = classification_report(test_lab, output_classes, output_dict=True)
 
     # save the results into a pickle file
     for model in models:
