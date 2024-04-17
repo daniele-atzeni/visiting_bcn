@@ -71,6 +71,15 @@ for model in models:
 
             # p-values of KS test for each feature
             print(f"Computing p-values for {model} and {l}...")
+            # shuffle and sample data
+            n_e1 = e1_lab.shape[0]
+            perm_e1 = np.random.permutation(n_e1)
+            n_e = e_lab.shape[0]
+            perm_e = np.random.permutation(n_e)
+            n_el = min(n_e1, n_e)
+            e1_lab = e1_lab[perm_e1[:n_el]]
+            e_lab = e_lab[perm_e[:n_el]] 
+            # compute test
             res[l][comp_data]["p_values"] = [
                 ks_2samp(e1_lab[:, i], e_lab[:, i]).pvalue  # type:ignore
                 for i in range(n_features)

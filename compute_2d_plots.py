@@ -2,7 +2,7 @@ import os
 import pickle
 
 import numpy as np
-import matplotlib as mpl
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
@@ -11,31 +11,58 @@ import umap
 
 from utils import load_embeddings, load_labels, compute_all_labels, aggregate_embeddings, aggregate_labels
 
-# Number of colors
-num_colors = 40
 
-# List of qualitative colormaps
-cmaps = [
-    "tab10",
-    "tab20",
-    "Set3",
-    "Set2",
-    "Set1",
-    "Pastel1",
-    "Pastel2",
-    "Dark2",
-    "Accent",
-]
+# t-sne parameters
+PARAMS_TSNE = {
+    "yamnet":{ "peplexity": 30, "early_exaggeration": 5},
+    "openl3":{ "peplexity": 3, "early_exaggeration": 9},
+    "wav2vec":{ "peplexity": 80, "early_exaggeration": 12},
+}
 
-# Generate colors
-colors = []
-for cmap_name in cmaps:
-    cmap = mpl.colormaps.get_cmap(cmap_name)
-    colors.extend(cmap(np.arange(cmap.N)))
-
-# If we have more colors than needed, truncate the list
-if len(colors) > num_colors:
-    colors = colors[:num_colors]
+# Define colors
+colors = {
+    'Human': (229, 27, 32),
+    'Human/Cough': (101, 19, 17),
+    'Human/Movement': (248, 201, 193),
+    'Human/Movement/Steps': (248, 201, 193),
+    'Human/Music': (234, 105, 104),
+    'Human/Voice': (178, 28, 28),
+    'Industrial': (32, 75, 155),
+    'Industrial/Construction': (134, 144, 200),
+    'Industrial/Industry': (110, 109, 143),
+    'Industrial/Vacuum': (204, 202, 216),
+    'Industrial/Ventilation': (69, 74, 113),
+    'Nature': (101, 179, 46),
+    'Nature/Animals': (142, 194, 87),
+    'Nature/Animals/Bird': (167, 206, 123),
+    'Nature/Animals/Cat': (106, 138, 93),
+    'Nature/Animals/Cricket': (66, 117, 63),
+    'Nature/Animals/Dog': (162, 208, 162),
+    'Nature/Animals/Sheep': (186, 191, 162),
+    'Nature/Elements': (39, 53, 29),
+    'Nature/Elements/Thunder': (110, 123, 102), 
+    'Nature/Elements/Water': (97, 101, 66),
+    'Nature/Elements/Wind': (42, 76, 38),
+    'Nature/Vegetation': (72, 129, 49),
+    'Signals': (238, 115, 22), 
+    'Signals/Alarm': (242, 145, 73),
+    'Signals/Bells': (174, 86, 22),
+    'Signals/Klaxon': (251, 205, 169),
+    'Signals/Siren': (206, 149, 103),
+    'Things': (251, 224, 23),
+    'Things/Ball': (253, 242, 184),
+    'Things/Blind': (252, 243, 162),
+    'Things/Door': (252, 248, 198),
+    'Things/Movement': (252, 229, 91),
+    'Things/Trolley': (251, 224, 50),
+    'Transport': (45, 188, 238),
+    'Transport/Motorized': (91, 153, 186),
+    'Transport/Motorized/Air': (23, 180, 233),
+    'Transport/Motorized/Rail': (139, 176, 203),
+    'Transport/Motorized/Road': (23, 131, 170),
+    'Transport/Non-motorized': (154, 211, 243)
+}
+colors = {k: tuple([c / 255 for c in v]) for k, v in colors.items()}
 
 
 def plot_overall_embeddings(
@@ -45,15 +72,17 @@ def plot_overall_embeddings(
     datasets,
     all_labels,
     model,
+    pre_trained_model,
     image_folder,
     size: int = 3,
     alpha: float = 0.3,
     filename: str = "all_datasets",
+    legend: bool = True,
 ):
+    global colors
     n_col = len(datasets) // 3 + len(datasets) % 3
-    fig, axs = plt.subplots(n_col, 3, figsize=(15, 8), dpi=300)
+    fig, axs = plt.subplots(n_col, 3, figsize=(12, 6), dpi=300)
     axs = axs.flatten()
-
     for i, dataset in enumerate(datasets):
         start, end = idxs[dataset]
         data_subset = data[start:end]
@@ -63,8 +92,7 @@ def plot_overall_embeddings(
         # idx = [l_i for l_i, l in enumerate(lab_list_subset) if len(l) > 0]
         # data_subset = data_subset[idx]
         # lab_list_subset = [lab_list_subset[k] for k in idx]
-
-        for j, lab in enumerate(all_labels):
+        for lab in all_labels:
             lab_idx = [l_i for l_i, l in enumerate(lab_list_subset) if lab in l]
             if len(lab_idx) == 0:
                 continue
@@ -72,24 +100,23 @@ def plot_overall_embeddings(
                 x=data_subset[lab_idx, 0],
                 y=data_subset[lab_idx, 1],
                 label=lab,
-                color=colors[j],
+                color=colors[lab],
                 s=size,
                 alpha=alpha,
             )
-        axs[i].set_title(dataset.replace("_", " ").title(), fontsize=20, pad=15)
-        axs[i].set_xticks([])
-        axs[i].set_yticks([])
-    #handles, labels = plt.gca().get_legend_handles_labels()
-    #lgnd = _.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.10), ncol=6, markerscale=5)
-    #for handle in lgnd.legendHandles:
-    #    handle.set_alpha(1)
-    plt.figlegend(bbox_to_anchor=(0.5, 1.05))
-    # plt.suptitle(f"{model} embeddings")
+        axs[i].set_title(dataset.replace("_", " ").title(), fontsize=18, pad=15)
+    if legend:
+        # The following two lines generate custom fake lines that will be used as legend entries:
+        colors_to_plot = {k: v for k, v in colors.items() if k in all_labels}
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in colors_to_plot.values()]
+        fig.legend(markers, colors_to_plot.keys(), numpoints=1, loc="lower center", bbox_to_anchor=(0.5, 1.05), ncol=6, markerscale=1)
+    suptitle = "b) YAMNet" if pre_trained_model == "yamnet" else "a) OpenL3" if pre_trained_model == "openl3" else "c) Wav2Vec"
+    fig.suptitle(suptitle, fontsize=22, fontweight='bold')
     plt.tight_layout()
     model_folder = os.path.join(image_folder, model)
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-    plt.savefig(os.path.join(model_folder, f"{filename}.png"), dpi=300)
+    plt.savefig(os.path.join(model_folder, f"{filename}.pdf"), dpi=300, bbox_inches="tight")
     plt.close()
 
 
@@ -104,7 +131,7 @@ def plot_labels_embeddings(
     size: int = 8,
     alpha: float = 0.6,
 ):
-
+    global colors
     for lab in all_labels:
         plt.figure(figsize=(15, 15))
 
@@ -120,7 +147,7 @@ def plot_labels_embeddings(
                 x=data_subset[:, 0],
                 y=data_subset[:, 1],
                 label=dataset.replace("_", " ").title(),
-                color=colors[i],
+                color=colors[lab],
                 s=size,
                 alpha=alpha,
             )
@@ -130,7 +157,7 @@ def plot_labels_embeddings(
         model_folder = os.path.join(image_folder, model)
         if not os.path.exists(model_folder):
             os.makedirs(model_folder)
-        filename = f"{lab}.png".replace("/", "_")
+        filename = f"{lab}.pdf".replace("/", "_")
         plt.savefig(os.path.join(model_folder, filename), dpi=300)
         plt.close()
 
@@ -154,6 +181,7 @@ datasets = labels.keys()
 loaded_embeddings = aggregate_embeddings(loaded_embeddings)
 labels = aggregate_labels(labels)
 
+legend = True
 for model in models:
     image_folder = os.path.join(IMAGE_FOLDER, model)
     if not os.path.exists(image_folder):
@@ -185,9 +213,9 @@ for model in models:
     pca = PCA(n_components=50)
     pca_data = pca.fit_transform(model_emb)
     # compute tsne
-    BEST_PERPL = 30
-    BEST_EARLY_EX = 12
-    tsne = TSNE(n_components=2, perplexity=BEST_PERPL, early_exaggeration=BEST_EARLY_EX)
+    perpl = PARAMS_TSNE[model]["peplexity"]
+    early_ex = PARAMS_TSNE[model]["early_exaggeration"]
+    tsne = TSNE(n_components=2, perplexity=perpl, early_exaggeration=early_ex)
     tsne_data = tsne.fit_transform(pca_data)
     # compute umap
     BEST_N_NEIGH = 15
@@ -197,8 +225,9 @@ for model in models:
 
     # we can plot
     plot_overall_embeddings(
-        tsne_data, model_labels, idxs, datasets, all_labels, "tsne", image_folder
+        tsne_data, model_labels, idxs, datasets, all_labels, "tsne", model, image_folder, legend=legend
     )
+    legend = False
     # plot_overall_embeddings(umap_data, model_labels, idxs, datasets, all_labels, "umap")
 
     # plot first level of the taxonomy
@@ -210,6 +239,7 @@ for model in models:
         datasets,
         first_levels,
         "tsne",
+        model,
         image_folder,
         size=8,
         filename="all_datasets_first",
